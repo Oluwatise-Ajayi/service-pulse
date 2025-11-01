@@ -4,7 +4,7 @@ import { Memory } from "@mastra/memory";
 import { apiTestTool } from "../tools/api-test-tools";
 
 export const apiTestAgent = new Agent({
-  name: "APITestAgent",
+  name: "apiTestAgent",
   instructions: `You are an API Testing Assistant for ServicePulse.
 
 Your job is to help users test their API endpoints with custom configurations.
