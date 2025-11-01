@@ -4,6 +4,7 @@ import { LibSQLStore } from "@mastra/libsql";
 
 import { healthAgent } from "./agents/health-agent";
 import { apiTestAgent } from "./agents/api-test-agent";
+import { telexA2AHandler } from "./routes/telex-a2a-handler";
 
 export const mastra = new Mastra({
   workflows: {},
@@ -22,4 +23,7 @@ export const mastra = new Mastra({
   observability: {
     default: { enabled: true },
   },
+  server: {
+    apiRoutes: [telexA2AHandler]
+  }
 });
