@@ -4,6 +4,9 @@ import { randomUUID } from 'crypto';
 /**
  * ASYNCHRONOUS A2A (Agent-to-Agent) route handler
  * This is designed to work with Telex.im's "blocking": false (webhook) pattern.
+ *
+ * v2 Update: Uses c.executionCtx.waitUntil() to prevent the serverless
+ * runtime from killing the background task.
  */
 export const telexA2AHandler = registerApiRoute('/a2a/agent/:agentId', {
   method: 'POST',
@@ -16,23 +19,18 @@ export const telexA2AHandler = registerApiRoute('/a2a/agent/:agentId', {
       const { jsonrpc, id: requestId, method, params } = body;
       const { message, contextId, taskId, configuration } = params || {};
       
-      // 1. Get the webhook URL and token from the request
       const webhookUrl = configuration?.pushNotificationConfig?.url;
       const webhookToken = configuration?.pushNotificationConfig?.token;
-
       if (!webhookUrl || !webhookToken) {
         throw new Error('Missing pushNotificationConfig in request');
       }
 
-      // 2. Get the main prompt from the complex 'parts' array
       const mainPrompt = message?.parts?.[0]?.text;
       if (!mainPrompt) {
         throw new Error('Could not find main prompt in message.parts[0].text');
       }
       
-      // --- This is the "Fire and Forget" part ---
-      // We start the agent's work but DON'T wait for it to finish.
-      // We wrap it in a function so the handler can continue.
+      // This is the background task that will run.
       const runAgentAndPushResult = async () => {
         try {
           console.log(`[A2A Async] 🚀 Starting agent ${agentId} for task ${taskId}`);
@@ -41,12 +39,10 @@ export const telexA2AHandler = registerApiRoute('/a2a/agent/:agentId', {
             throw new Error(`Agent '${agentId}' not found`);
           }
 
-          // 3. DO THE ACTUAL WORK (this might take time)
           const response = await agent.generate(mainPrompt);
           const agentText = response.text || '';
           console.log(`[A2A Async] ✅ Agent ${agentId} finished. Replying to webhook...`);
 
-          // 4. Build the A2A-compliant result
           const artifacts = [
             {
               artifactId: randomUUID(),
@@ -61,14 +57,14 @@ export const telexA2AHandler = registerApiRoute('/a2a/agent/:agentId', {
               name: 'ToolResults',
               parts: response.toolResults.map((result) => ({
                 kind: 'text',
-                text: typeof result === 'string' ? result : JSON.stringify(result)
+                text: typeof result === "string" ? result : JSON.stringify(result)
               }))
             });
           }
 
           const resultPayload = {
             jsonrpc: '2.0',
-            id: requestId, // Use the original request ID
+            id: requestId,
             result: {
               id: taskId || randomUUID(),
               contextId: contextId || randomUUID(),
@@ -88,7 +84,6 @@ export const telexA2AHandler = registerApiRoute('/a2a/agent/:agentId', {
             }
           };
 
-          // 5. POST the final result back to the Telex webhook
           await fetch(webhookUrl, {
             method: 'POST',
             headers: {
@@ -105,11 +100,12 @@ export const telexA2AHandler = registerApiRoute('/a2a/agent/:agentId', {
         }
       };
       
-      // Start the async work, but don't await it
-      runAgentAndPushResult(); 
+      // --- THIS IS THE FIX ---
+      // Tell the execution context to wait for the background task to finish
+      // before terminating the entire process.
+      c.executionCtx.waitUntil(runAgentAndPushResult()); 
 
-      // 6. IMMEDIATELY return the "202 Accepted" response
-      // This tells Telex "I got the job, I'll ping you when I'm done."
+      // IMMEDIATELY return the "202 Accepted" response
       console.log(`[A2A Handler] 📬 Sending 202 Accepted for task ${taskId}`);
       return c.json({
         status: "success",
@@ -129,3 +125,4 @@ export const telexA2AHandler = registerApiRoute('/a2a/agent/:agentId', {
     }
   }
 });
+
