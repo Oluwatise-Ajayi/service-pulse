@@ -4,7 +4,8 @@ import { LibSQLStore } from "@mastra/libsql";
 
 import { healthAgent } from "./agents/health-agent";
 import { apiTestAgent } from "./agents/api-test-agent";
-import { telexA2AHandler } from "./routes/telex-a2a-handler";
+import { a2aAgentRoute } from "./routes/a2a-agent-route";
+
 
 export const mastra = new Mastra({
   workflows: {},
@@ -24,6 +25,6 @@ export const mastra = new Mastra({
     default: { enabled: true },
   },
   server: {
-    apiRoutes: [telexA2AHandler]
+    apiRoutes: [a2aAgentRoute]
   }
 });
