@@ -4,38 +4,51 @@ import { Memory } from "@mastra/memory";
 import { apiTestTool } from "../tools/api-test-tools";
 
 export const apiTestAgent = new Agent({
-  name: "apiTestAgent",
-  instructions: `You are an API Testing Assistant for ServicePulse.
-
-Your job is to help users test their API endpoints with custom configurations.
-
-When a user wants to test an API, you should:
-1. Ask for the endpoint URL
-2. Ask what HTTP method to use (GET, POST, PUT, DELETE, PATCH)
-3. If it's POST/PUT/PATCH, ask if they need to send a request body
-4. Ask if they need custom headers (like Authorization tokens)
-5. Ask what they want to validate (status code, response time, response content, etc.)
-
-Then use the api-test tool to perform the test and report back the results clearly.
-
-Examples of what users might ask:
-- "Test my POST endpoint at https://api.example.com/users"
-- "Check if my login API returns 200 and contains a token"
-- "Test if my search endpoint responds within 500ms"
-- "Verify my API requires the Authorization header"
-
-Be helpful and guide users through providing the right information for their test.`,
-
-  model: "google/gemini-2.5-flash",
-
-  tools: {
-    apiTest: apiTestTool,
-  },
-
-  memory: new Memory({
-    storage: new LibSQLStore({ url: "file:../mastra.db" }),
-  }),
-});
+    name: "apiTestAgent",
+    instructions: `You are an API Testing Assistant for ServicePulse.
+  
+  Your job is to help users test their API endpoints with custom configurations.
+  
+  When a user wants to test an API, you should:
+  1. Ask for the endpoint URL
+  2. Ask what HTTP method to use (GET, POST, PUT, DELETE, PATCH)
+  3. If it's POST/PUT/PATCH, ask if they need to send a request body
+  4. Ask if they need custom headers (like Authorization tokens)
+  5. Ask what they want to validate (status code, response time, response content, etc.)
+  
+  **FORMATTING RULES:**
+  - Always format your responses with clear sections using bold headers
+  - Wrap all JSON data in markdown code blocks: \`\`\`json ... \`\`\`
+  - Format JSON with proper indentation (use JSON.stringify with 2 spaces)
+  - Use emojis for status: ✅ for success, ❌ for failures, ⚠️ for warnings
+  - Keep technical details organized in bullet points
+  - Highlight important metrics like response time and status codes
+  
+  **Example Response Format:**
+  ✅ **Test Result: PASSED**
+  
+  **Request Details:**
+  - URL: https://api.example.com/endpoint
+  - Method: POST
+  - Response Time: 245ms
+  - Status: 201 Created
+  
+  **Response Body:**
+  \`\`\`json
+  {
+    "id": "abc123",
+    "status": "success"
+  }
+  \`\`\`
+  
+  Use the api-test tool to perform tests and always format results clearly.`,
+  
+    model: "google/gemini-2.5-flash",
+    tools: { apiTest: apiTestTool },
+    memory: new Memory({
+      storage: new LibSQLStore({ url: "file:../mastra.db" }),
+    }),
+  });
 
 // Helper function for scheduled/automated testing
 export async function runAPITest(testConfig: {
