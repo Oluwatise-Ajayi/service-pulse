@@ -1,11 +1,10 @@
 import { Mastra } from "@mastra/core/mastra";
 import { PinoLogger } from "@mastra/loggers";
 import { LibSQLStore } from "@mastra/libsql";
-
 import { healthAgent } from "./agents/health-agent";
 import { apiTestAgent } from "./agents/api-test-agent";
 import { a2aAgentRoute } from "./routes/a2a-agent-route";
-
+import { healthRoute } from "./routes/health-route";
 
 export const mastra = new Mastra({
   workflows: {},
@@ -25,6 +24,6 @@ export const mastra = new Mastra({
     default: { enabled: true },
   },
   server: {
-    apiRoutes: [a2aAgentRoute]
-  }
+    apiRoutes: [a2aAgentRoute,healthRoute],
+  },
 });
